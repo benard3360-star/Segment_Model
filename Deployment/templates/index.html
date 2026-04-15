@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Customer Segmentation System</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      background: #eef1f7;
+      color: #2d2d2d;
+      min-height: 100vh;
+    }
+
+    header {
+      background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%);
+      color: #fff;
+      padding: 28px 48px;
+    }
+    header h1 { font-size: 1.9rem; letter-spacing: 0.3px; }
+    header p  { margin-top: 6px; font-size: 0.95rem; opacity: 0.82; }
+
+    .container { max-width: 900px; margin: 36px auto; padding: 0 24px; }
+
+    .card {
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 2px 14px rgba(0,0,0,0.07);
+      padding: 28px 32px;
+      margin-bottom: 24px;
+    }
+
+    .card-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #888;
+      margin-bottom: 14px;
+    }
+
+    select {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1.5px solid #d0d5dd;
+      border-radius: 8px;
+      font-size: 1rem;
+      background: #fafbfc;
+      color: #2d2d2d;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23888' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      cursor: pointer;
+    }
+    select:focus { outline: none; border-color: #1a73e8; }
+
+    button {
+      margin-top: 18px;
+      padding: 12px 32px;
+      background: #1a73e8;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover { background: #1558b0; }
+
+    /* Segment result row */
+    .result-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .cluster-badge {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      font-weight: 800;
+      font-size: 0.85rem;
+      flex-shrink: 0;
+    }
+    .cluster-badge span { font-size: 1.8rem; font-weight: 900; line-height: 1; }
+
+    .badge-0 { background: #fce4ec; color: #c62828; }
+    .badge-1 { background: #e8f5e9; color: #2e7d32; }
+    .badge-2 { background: #e3f2fd; color: #1565c0; }
+
+    .segment-info { flex: 1; }
+    .segment-label { font-size: 0.8rem; color: #888; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; }
+    .segment-name  { font-size: 1.35rem; font-weight: 700; margin-top: 6px; }
+    .segment-desc  { margin-top: 8px; font-size: 0.93rem; color: #555; line-height: 1.55; }
+
+    /* Descriptions per cluster */
+    .desc-0 { color: #b71c1c; }
+    .desc-1 { color: #1b5e20; }
+    .desc-2 { color: #0d47a1; }
+
+    /* Error */
+    .error-box {
+      background: #fce4ec;
+      color: #c62828;
+      border-left: 4px solid #e53935;
+      padding: 14px 18px;
+      border-radius: 8px;
+      font-weight: 500;
+    }
+
+    /* Snapshot table */
+    .snapshot-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+    .cust-id-tag {
+      background: #e8f0fe;
+      color: #1a73e8;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    thead th {
+      background: #f5f7fa;
+      padding: 10px 14px;
+      text-align: left;
+      font-weight: 700;
+      color: #555;
+      border-bottom: 2px solid #e8eaed;
+    }
+    tbody td {
+      padding: 9px 14px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover td { background: #f9fbff; }
+    td:last-child { font-family: 'Courier New', monospace; color: #1a73e8; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>&#127942; Customer Segmentation System</h1>
+  <p>Select a customer number to predict their segment and view their full profile</p>
+</header>
+
+<div class="container">
+
+  <!-- Input Card -->
+  <div class="card">
+    <div class="card-title">Customer Lookup</div>
+    <form method="post" action="/predict">
+      <label for="customer_number" style="font-weight:600; display:block; margin-bottom:8px;">
+        Select Customer Number
+      </label>
+      <select name="customer_number" id="customer_number">
+        {% for cid in customer_ids %}
+          <option value="{{ cid }}" {% if selected == cid %}selected{% endif %}>{{ cid }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit">&#128269; Predict Segment</button>
+    </form>
+  </div>
+
+  <!-- Error -->
+  {% if error %}
+  <div class="card">
+    <div class="error-box">&#9888; {{ error }}</div>
+  </div>
+  {% endif %}
+
+  <!-- Segment Result -->
+  {% if result %}
+  <div class="card">
+    <div class="card-title">Segment Insight</div>
+    <div class="result-row">
+      <div class="cluster-badge badge-{{ result.cluster }}">
+        <span>{{ result.cluster }}</span>
+        Cluster
+      </div>
+      <div class="segment-info">
+        <div class="segment-label">Segment Name</div>
+        <div class="segment-name">{{ result.segment }}</div>
+        <div class="segment-desc">
+          {% if result.cluster == 0 %}
+            <span class="desc-0">These customers show minimal activity and low engagement across digital channels. Consider re-engagement campaigns.</span>
+          {% elif result.cluster == 1 %}
+            <span class="desc-1">Top-tier customers with high transaction volumes and strong digital product adoption. Prioritize retention and premium offers.</span>
+          {% else %}
+            <span class="desc-2">Regularly active customers using core services. Strong candidates for upselling and feature adoption nudges.</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Customer Snapshot -->
+  <div class="card">
+    <div class="snapshot-header">
+      <div class="card-title" style="margin-bottom:0">Customer Snapshot</div>
+      <span class="cust-id-tag">{{ result.customer_number }}</span>
+    </div>
+    <table>
+      <thead>
+        <tr><th>Feature</th><th>Value</th></tr>
+      </thead>
+      <tbody>
+        {% for row in result.snapshot %}
+        <tr>
+          <td>{{ row.Feature }}</td>
+          <td>{{ row.Value }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+</div>
+</body>
+</html>
