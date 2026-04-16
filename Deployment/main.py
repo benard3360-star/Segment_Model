@@ -6,6 +6,7 @@ import pandas as pd
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
+templates.env.cache = None
 
 # Load artifacts
 kmeans = joblib.load("kmeans_model.pkl")
@@ -33,8 +34,9 @@ customer_ids = df_model["customer_number"].astype(str).unique().tolist()
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     return templates.TemplateResponse(
-        "index.html",
-        {"request": request, "customer_ids": customer_ids, "result": None, "error": None, "selected": None},
+        request=request,
+        name="index.html",
+        context={"request": request, "customer_ids": customer_ids, "result": None, "error": None, "selected": None},
     )
 
 
@@ -70,8 +72,9 @@ async def predict(request: Request, customer_number: str = Form(...)):
         }
 
     return templates.TemplateResponse(
-        "index.html",
-        {
+        request=request,
+        name="index.html",
+        context={
             "request": request,
             "customer_ids": customer_ids,
             "result": result,
